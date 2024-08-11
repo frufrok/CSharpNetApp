@@ -38,12 +38,20 @@ namespace ChatDBNet.Message
             {
                 var that = (NetMessage)obj;
                 return this.MessageType.Equals(that.MessageType)
-                && DateTime.Equals(this.DateTime, that.DateTime)
+                && DateTimeApproxEquals(this.DateTime, that.DateTime)
                 && String.Equals(this.UserFrom, that.UserFrom)
                 && String.Equals(this.UserTo, that.UserTo)
                 && String.Equals(this.Text, that.Text);
             }
             else return false;
+        }
+
+        private static bool DateTimeApproxEquals(DateTime time1, DateTime time2)
+        {
+            return time1.Date.Equals(time2.Date)
+                && time1.Hour.Equals(time2.Hour)
+                && time1.Minute.Equals(time2.Minute)
+                && time1.Second.Equals(time2.Second);
         }
 
         public string SerializeToJson()

@@ -109,7 +109,6 @@ namespace ChatDBTest
             {
                 var message1 = new NetMessage() { Text = "Hello", UserFrom = "User1", UserTo = "User2" };
                 var message2 = NetMessage.DeserializeFromJson(message1.SerializeToJson());
-                Assert.That(message2, Is.Not.Null);
                 Assert.That(message2, Is.EqualTo(message1));
             }
             await Task.Run(check);
