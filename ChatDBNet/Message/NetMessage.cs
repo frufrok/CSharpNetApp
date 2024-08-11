@@ -10,7 +10,7 @@ namespace ChatDBNet.Message
         AUTHENTIFICATION,
         CONFIRMATION
     }
-    public class NetMessage()
+    public class NetMessage() : ICloneable
     {
         public MessageType MessageType { get; set; } = MessageType.SIMPLE;
 
@@ -37,7 +37,8 @@ namespace ChatDBNet.Message
             if (obj?.GetType() == typeof(NetMessage))
             {
                 var that = (NetMessage)obj;
-                return DateTime.Equals(this.DateTime, that.DateTime)
+                return this.MessageType.Equals(that.MessageType)
+                && DateTime.Equals(this.DateTime, that.DateTime)
                 && String.Equals(this.UserFrom, that.UserFrom)
                 && String.Equals(this.UserTo, that.UserTo)
                 && String.Equals(this.Text, that.Text);
@@ -75,6 +76,11 @@ namespace ChatDBNet.Message
                 return JsonSerializer.Deserialize<List<NetMessage>>(listMessage.Text);
             }
             else throw new Exception("Message is not list message.");
+        }
+
+        public object Clone()
+        {
+            return this.MemberwiseClone();
         }
     }
 }
