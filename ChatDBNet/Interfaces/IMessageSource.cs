@@ -8,10 +8,6 @@ namespace ChatDBNet.Interfaces
     {
         Task SendAsync(NetMessage message, IPEndPoint receiver);
 
-        Task StartReceivingAsync(Action<NetMessage, IPEndPoint> preliminaryHandling);
-
-        void StopReceiving();
-
         BlockingCollection<(NetMessage, IPEndPoint)> InBox { get; init; }
     }
 }

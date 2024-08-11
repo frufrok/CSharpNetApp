@@ -12,22 +12,24 @@ using System.Net.Sockets;
 
 namespace ChatDBNet.Udp
 {
-    public class UdpMessageSource : IMessageSource
+    public class UdpMessageSource : IMessageSource, IDisposable
     {
         private readonly CancellationTokenSource _stopReceivingTokenSource = new CancellationTokenSource();
-        public int ListeningPort { get; init; }
+        public ushort ListeningPort { get; init; }
         public IPAddress LocalAddress { get; init; }
+        public IPEndPoint ListeningEndPoint { get => new(LocalAddress, ListeningPort); }
         public UdpClient ListeningUdpClient { get; init; }
         public UdpClient SendingUdpClient { get; init; }
         public BlockingCollection<(NetMessage, IPEndPoint)> InBox { get; init; } = [];
         
-        public UdpMessageSource(ushort listeningPort)
+        public UdpMessageSource(ushort listeningPort = 0)
         {
             this.LocalAddress = GetLocalIPAddress();
+            var localEP = new IPEndPoint(this.LocalAddress, listeningPort);
+            this.ListeningPort = (ushort)localEP.Port;
+            this.ListeningUdpClient = new UdpClient();
+            this.ListeningUdpClient.Client.Bind(localEP);
             this.SendingUdpClient = new UdpClient();
-            this.ListeningUdpClient = listeningPort > 0 ? new UdpClient(listeningPort) : new UdpClient();
-            ArgumentNullException.ThrowIfNull(this.ListeningUdpClient.Client.LocalEndPoint);
-            this.ListeningPort = ((IPEndPoint)this.ListeningUdpClient.Client.LocalEndPoint).Port;
         }
 
         public async Task SendAsync(NetMessage message, IPEndPoint receiver)
@@ -66,6 +68,12 @@ namespace ChatDBNet.Udp
                 if (ip.AddressFamily == AddressFamily.InterNetwork) return ip;
             }
             throw new Exception("No network adapters with an IPv4 address in the system!");
+        }
+
+        public void Dispose()
+        {
+            this.ListeningUdpClient.Dispose();
+            this.SendingUdpClient.Dispose();
         }
     }
 }
