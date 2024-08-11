@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 
-namespace CodeFirstDB
+namespace ChatDB.Models
 {
     internal class ChatDBContext :  DbContext
     {

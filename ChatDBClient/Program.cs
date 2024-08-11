@@ -1,4 +1,4 @@
-﻿namespace CodeFirstDB
+﻿namespace ChatDBClient
 {
     internal class Program
     {
