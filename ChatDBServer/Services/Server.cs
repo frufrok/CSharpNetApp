@@ -72,19 +72,19 @@ namespace ChatDBServer.Services
             {
                 await _messageSource.SendAsync(NetMessage.CreateConfirmation(message), ip);
 
-                string nick = message.UserFrom;
-                if (nick.ToLower().Equals("server") || nick.ToLower().Equals("public") || nick.ToLower().Equals("admin"))
+                string fromNick = message.UserFrom;
+                if (fromNick.ToLower().Equals("server") || fromNick.ToLower().Equals("public") || fromNick.ToLower().Equals("admin"))
                 {
-                    await _messageSource.SendAsync(new() { Text = $"Имя пользователя {nick} недопустимо. Повторите регистрацию." }, ip);
+                    await _messageSource.SendAsync(new() { Text = $"Имя пользователя {fromNick} недопустимо. Повторите регистрацию." }, ip);
                 }
                 else
                 {
-                    _onLineUsers.TryAdd(nick, ip);
-                    if (_db.GetUserID(nick) == -1)
+                    _onLineUsers.TryAdd(fromNick, ip);
+                    if (_db.GetUserID(fromNick) == -1)
                     {
-                        _db.AddUser(nick, out int ID);
+                        _db.AddUser(fromNick, out int ID);
                         NetMessage msg = new() { Text = $"Успешная регистрация! Ваш ID: {ID}.", UserFrom = "server" };
-                        await SendMessage(msg, nick);
+                        await SendMessage(msg, fromNick);
                     }
                     else
                     {
