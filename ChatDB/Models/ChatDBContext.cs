@@ -5,16 +5,20 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 
-namespace CodeFirstDB
+namespace ChatDB.Models
 {
-    internal class ChatDBContext :  DbContext
+    public class ChatDBContext :  DbContext
     {
+        public ChatDBContext(string connectionString)
+        {
+            _connectionString = connectionString;
+        }
+        private string _connectionString;
         public DbSet<User> Users { get; set; }
         public DbSet<Message> Messages { get; set; }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseNpgsql("Host=localhost;Port=5432;Database=ChatDB;" +
-                "Username=postgres;Password=password").UseLazyLoadingProxies();
+            optionsBuilder.UseNpgsql(_connectionString).UseLazyLoadingProxies();
         }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
