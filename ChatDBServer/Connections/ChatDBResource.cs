@@ -11,16 +11,9 @@ namespace ChatDBServer.Connections
 {
     public class ChatDBResource : IDBResource
     {
-        private string _connectionString;
-        public ChatDBResource(string connectionString = 
-            "Host=localhost;Port=5432;Database=ChatDB;" +
-                "Username=postgres;Password=password")
-        {
-            _connectionString = connectionString;
-        }
         public void AddMessage(NetMessage message, bool isSent, out int ID)
         {
-            using var context = new ChatDBContext(_connectionString);
+            using var context = new ChatDBContext();
             int userFromID = GetUserID(message.UserFrom);
             int userToID = GetUserID(message.UserTo);
             var dbMessage = new Message()
@@ -37,7 +30,7 @@ namespace ChatDBServer.Connections
 
         public void AddUser(string nickName, out int ID)
         {
-            using var context = new ChatDBContext(_connectionString);
+            using var context = new ChatDBContext();
             User user = new() { Nickname = nickName };
             context.Users.Add(user);
             context.SaveChanges();
@@ -46,7 +39,7 @@ namespace ChatDBServer.Connections
 
         public List<NetMessage> GetMessages(int userID, bool unsentOnly)
         {
-            using var context = new ChatDBContext(_connectionString);
+            using var context = new ChatDBContext();
             return context.Messages.Where(x => (x.UserToID.Equals(userID) && unsentOnly ? x.IsSent == false : true)).Select(x => new NetMessage()
             {
                 DateTime = x.DateTimeSend ?? DateTime.UtcNow,
@@ -58,7 +51,7 @@ namespace ChatDBServer.Connections
 
         public int GetUserID(string nickname)
         {
-            using var context = new ChatDBContext(_connectionString);
+            using var context = new ChatDBContext();
             if (context.Users.Any(x => x.Nickname.ToLower().Equals(nickname.ToLower())))
             {
                 var dict = context.Users.ToDictionary(x => x.Nickname.ToLower(), x => x);
@@ -69,7 +62,7 @@ namespace ChatDBServer.Connections
 
         public Dictionary<int, string> GetUsers()
         {
-            using var context = new ChatDBContext(_connectionString);
+            using var context = new ChatDBContext();
             return context.Users.ToDictionary(x => x.ID ?? -1, x => x.Nickname);
         }
     }
