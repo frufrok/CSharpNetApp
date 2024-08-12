@@ -44,6 +44,7 @@ namespace ChatDBNet.NetMQ
             {
                 this.SendingSocket.Connect(GetConnectionString(receiver));
                 this.SendingSocket.SendFrame(json);
+                this.SendingSocket.ReceiveFrameBytes();
             });
         }
 
@@ -60,6 +61,7 @@ namespace ChatDBNet.NetMQ
                 while (!stop.IsCancellationRequested)
                 {
                     var result = this.ListeningSocket.ReceiveFrameString();
+                    this.ListeningSocket.SendFrameEmpty();
                     var messageJson = result;
                     NetMessage? message = NetMessage.DeserializeFromJson(messageJson);
                     if (message != null)

@@ -13,7 +13,7 @@ namespace ChatDBTest
                 "Username=postgres;Password=password";
         private void ClearDB()
         {
-            using var context = new ChatDBContext(_connectionString);
+            using var context = new ChatDBContext();
             context.Messages.RemoveRange(context.Messages);
             context.Users.RemoveRange(context.Users);
             context.SaveChanges();
@@ -23,7 +23,7 @@ namespace ChatDBTest
         public void Setup()
         {
             ClearDB();
-            using var context = new ChatDBContext(_connectionString);
+            using var context = new ChatDBContext();
         }
 
         [TearDown]
@@ -37,7 +37,7 @@ namespace ChatDBTest
         {
             static void Check()
             {
-                var resource = new ChatDBResource(_connectionString);
+                var resource = new ChatDBResource();
                 resource.AddUser("User1", out int user1ID);
                 resource.AddUser("User2", out int user2ID);
                 var msg = new NetMessage()
@@ -57,7 +57,7 @@ namespace ChatDBTest
         {
             static void Check()
             {
-                var resource = new ChatDBResource(_connectionString);
+                var resource = new ChatDBResource();
                 resource.AddUser("User3", out int user3ID);
                 Assert.That(user3ID, Is.AtLeast(0));
             }
@@ -68,7 +68,7 @@ namespace ChatDBTest
         {
             static void Check()
             {
-                var resource = new ChatDBResource(_connectionString);
+                var resource = new ChatDBResource();
                 resource.AddUser("User4", out int user4ID);
                 resource.AddUser("User5", out int user5ID);
 
@@ -93,7 +93,7 @@ namespace ChatDBTest
         {
             static void Check()
             {
-                var resource = new ChatDBResource(_connectionString);
+                var resource = new ChatDBResource();
                 string nickname = "User6";
                 resource.AddUser(nickname, out int userID);
                 int id = resource.GetUserID(nickname);
@@ -107,7 +107,7 @@ namespace ChatDBTest
         {
             static void Check()
             {
-                var resource = new ChatDBResource(_connectionString);
+                var resource = new ChatDBResource();
                 string user7 = "User7";
                 string user8 = "User8";
                 resource.AddUser(user7, out int user7ID);
