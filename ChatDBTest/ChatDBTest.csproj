@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\ChatDBClient\ChatDBClient.csproj" />
     <ProjectReference Include="..\ChatDBNet\ChatDBNet.csproj" />
     <ProjectReference Include="..\ChatDBServer\ChatDBServer.csproj" />
     <ProjectReference Include="..\ChatDB\ChatDB.csproj" />
