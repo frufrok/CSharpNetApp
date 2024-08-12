@@ -83,12 +83,12 @@ namespace ChatDBServer.Services
                     if (_db.GetUserID(nick) == -1)
                     {
                         _db.AddUser(nick, out int ID);
-                        NetMessage msg = new() { Text = $"Успешная регистрация! Ваш ID: {ID}." };
+                        NetMessage msg = new() { Text = $"Успешная регистрация! Ваш ID: {ID}.", UserFrom = "server" };
                         await SendMessage(msg, nick);
                     }
                     else
                     {
-                        await _messageSource.SendAsync(new() { Text = "Пользователь с таким именем уже зарегистрирован." }, ip);
+                        await _messageSource.SendAsync(new() { Text = "Вы уже зарегистрированы.", UserFrom = "server" }, ip);
                     }
                 }
             }

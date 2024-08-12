@@ -34,6 +34,10 @@ namespace ChatDBNet.Udp
 
         public async Task SendAsync(NetMessage message, IPEndPoint receiver)
         {
+            if (message.MessageType == MessageType.REGISTRATION)
+            {
+                message.Text = $"{this.LocalAddress}:{this.ListeningPort}";
+            }
             string json = message.SerializeToJson();
             var data = Encoding.UTF8.GetBytes(json);
             await SendingUdpClient.SendAsync(data, data.Length, receiver);
