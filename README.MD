@@ -26,4 +26,6 @@
 
 ### Решение
 
-
+Добавлены тесты для Message, UdpMessageSource, ChatDBResource, Server и Client. 
+Использован пакет Moq для мокирования ChatDBResource и собственные Mock-классы 
+для мокирования IMessageSource.
