@@ -168,7 +168,7 @@ namespace ChatDBTest
                     Text = "Hello!"
                 };
 
-                var receiving = ms1.StartReceivingAsync((x, y) => { });
+                var receiving = ms1.StartReceivingAsync();
                 Thread.Sleep(1000);
                 var sending = ms2.SendAsync(message, ms1.ListeningEndPoint);
 

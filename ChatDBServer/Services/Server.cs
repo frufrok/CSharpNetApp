@@ -1,83 +1,183 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using ChatDBNet.Interfaces;
-using ChatDBNet.Message;
-using ChatDB.Models;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Net;
+using ChatDBNet.Message;
+using ChatDBNet.Interfaces;
+using ChatDBServer.Interfaces;
 
 namespace ChatDBServer.Services
 {
     public class Server
     {
+        private readonly Dictionary<string, IPEndPoint> _onLineUsers = [];
+        public HashSet<string> OnLineUsers { get => [.. _onLineUsers.Keys]; }
         private readonly IMessageSource _messageSource;
-        public Server(int listeningPort = 0)
+        private readonly IDBResource _db;
+        private readonly CancellationTokenSource _serverStopTokenSource = new();
+        private readonly ConcurrentDictionary<int, KeepUser> _notConfirmed = [];
+        public Server(IMessageSource messageSource, IDBResource db)
         {
-            _messageSource = listeningPort > 0 ? new UdpMessageSource(listeningPort) : new UdpMessageSource();
+            this._messageSource = messageSource;
+            this._db = db;
         }
-        private ConcurrentDictionary<string, IPEndPoint> _clients = [];
-
-        public async void Start()
+        public void Run()
         {
-            Console.WriteLine("Сервер ожидает сообщения.");
-            while (true)
+            Console.WriteLine("Сервер запущен.");
+            _messageSource.StartReceivingAsync();
+            Task.WaitAll([Task.Run(CancellationRequest), Task.Run(WorkingCycle)]);
+        }
+        private void CancellationRequest()
+        {
+            Console.WriteLine("Нажмите любую клавишу для того, чтобы завершить работу.");
+            //Console.ReadKey();
+            // TODO: Вернуть к ReadKey()
+            Thread.Sleep(new TimeSpan(1, 0, 0));
+            Console.WriteLine();
+            Console.WriteLine("Работа сервера будет завершена после получения следующего сообщения.");
+            _serverStopTokenSource.Cancel();
+        }
+        private void WorkingCycle()
+        {
+            while (true && !_serverStopTokenSource.IsCancellationRequested)
             {
-                try
+                if (_messageSource.InBox.Count > 0)
                 {
-                    var result = await _messageSource.ReceiveAsync();
-                    Console.WriteLine(result.Item1);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
+                    var tuple = _messageSource.InBox.Take();
+                    HandleMessage(tuple.Item1, tuple.Item2);
                 }
             }
+            _messageSource.StopReceiving();
         }
-
-        private async Task ProcessMessageAsync(NetMessage message, IPEndPoint fromIP)
+        private async Task SendConfirmationAsync(NetMessage message, IPEndPoint ip)
         {
+            await _messageSource.SendAsync(NetMessage.CreateConfirmation(message), ip);
+        }
+        private async Task HandleMessage(NetMessage message, IPEndPoint ip)
+        {
+            Console.WriteLine($"С IP адреса {ip.Address}:{ip.Port} получено сообщение:");
+            Console.WriteLine($"\t{message}");
+
             switch (message.MessageType)
             {
-                case MessageType.SIMPLE:
-                    break;
-                case MessageType.LIST:
-                    break;
-                case MessageType.REGISTRATION:
-                    await RegisterUserAsync(message, fromIP);
-                    break;
-                case MessageType.CONFIRMATION:
-                    break;
+                case MessageType.SIMPLE: await HandleSimpleMessage(message); break;
+                case MessageType.LIST: break;
+                case MessageType.REGISTRATION: await RegisterClientAsync(message); break;
+                case MessageType.AUTHENTIFICATION: throw new NotImplementedException();
+                case MessageType.CONFIRMATION: RemoveFromConfirmationDictionary(message); break;
+                default: Console.WriteLine("Неизвестный тип сообщений"); break;
+            }
+        }
+        private async Task RegisterClientAsync(NetMessage message)
+        {
+            if (IPEndPoint.TryParse(message.Text, out var ip))
+            {
+                await _messageSource.SendAsync(NetMessage.CreateConfirmation(message), ip);
+
+                string nick = message.UserFrom;
+                if (nick.ToLower().Equals("server") || nick.ToLower().Equals("public") || nick.ToLower().Equals("admin"))
+                {
+                    await _messageSource.SendAsync(new() { Text = $"Имя пользователя {nick} недопустимо. Повторите регистрацию." }, ip);
+                }
+                else
+                {
+                    _onLineUsers.TryAdd(nick, ip);
+                    if (_db.GetUserID(nick) == -1)
+                    {
+                        _db.AddUser(nick, out int ID);
+                        NetMessage msg = new() { Text = $"Успешная регистрация! Ваш ID: {ID}." };
+                        await SendMessage(msg, nick);
+                    }
+                    else
+                    {
+                        await _messageSource.SendAsync(new() { Text = "Пользователь с таким именем уже зарегистрирован." }, ip);
+                    }
+                }
+            }
+            else
+            {
+                Console.WriteLine("Ошибка парсинга клиентского EndPoint.");
+            }
+        }
+        private async Task<bool> SendMessage(NetMessage msg, string nick)
+        {
+            AddToConfirmationDictionary(msg.GetHashCode(), nick, out var ct);
+            await _messageSource.SendAsync(msg, _onLineUsers[nick]);
+            DeleteIfNotConfirmed(msg.GetHashCode(), nick, ct, out var deleted);
+            return !deleted;
+        }
+
+        private void AddToConfirmationDictionary(int messageHash, string nick, out CancellationToken cancellationToken)
+        {
+            var cts = new CancellationTokenSource();
+            void cansel()
+            {
+                cts.Cancel();
+            }
+            KeepUser keepUser;
+            keepUser = cansel;
+            _notConfirmed.TryAdd(messageHash, keepUser);
+            cancellationToken = cts.Token;
+        }
+
+        private delegate void KeepUser();
+
+        private void DeleteIfNotConfirmed(int messageHash, string nick, CancellationToken cancellationToken, out bool deleted)
+        {
+            Thread.Sleep(10_000);
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                if (_onLineUsers.ContainsKey(nick))
+                {
+                    _onLineUsers.Remove(nick);
+                    _notConfirmed.TryRemove(messageHash, out _);
+                }
+                deleted = true;
+            }
+            else deleted = false;
+        }
+
+        private void RemoveFromConfirmationDictionary(NetMessage message)
+        {
+            if (_notConfirmed.TryGetValue(message.GetHashCode(), out var keepUser))
+            {
+                keepUser();
+                _notConfirmed.TryRemove(message.GetHashCode(), out _);
             }
         }
 
-        private async Task RegisterUserAsync(NetMessage message, IPEndPoint fromIP)
+        private async Task HandleSimpleMessage(NetMessage msg)
         {
-            Console.WriteLine($"Регистрация клиента {message.UserFrom}");
-            await Task.Run(() =>
+            if (_onLineUsers.ContainsKey(msg.UserFrom))
             {
-                if (_clients.TryAdd(message.UserFrom, fromIP))
+                _messageSource.SendAsync(NetMessage.CreateConfirmation(msg), _onLineUsers[msg.UserFrom]);
+                if (msg.UserTo.ToLower().Equals("public"))
                 {
-                        using var context = new ChatDBContext();
-                        context.Users.Add(new User() { Nickname = message.UserFrom });
-                        context.SaveChanges();
+                    _db.AddMessage(msg, true, out _);
+                    foreach (var user in _onLineUsers)
+                    {
+                        SendMessage(msg, user.Key);
+                    }
                 }
-            });
-        }
-        private async Task RelyMessage(NetMessage message)
-        {
-            await Task.Run(() =>
-            {
-                throw new NotImplementedException();
-                /*if (_clients.ContainsKey(message.UserFrom))
+                else
                 {
-
+                    if (_onLineUsers.ContainsKey(msg.UserTo))
+                    {
+                        var sending = SendMessage(msg, msg.UserTo);
+                        sending.Wait();
+                        _db.AddMessage(msg, sending.Result, out _);
+                    }
+                    else
+                    {
+                        if (_db.GetUserID(msg.UserTo) >= 0)
+                        {
+                            _db.AddMessage(msg, false, out _);
+                        }
+                        else
+                        {
+                            await SendMessage(new NetMessage() { Text = "Получатель не зарегистрирован." }, msg.UserFrom);
+                        }
+                    }
                 }
-                */
-            });
+            }
         }
-
     }
 }

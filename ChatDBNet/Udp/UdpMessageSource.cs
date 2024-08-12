@@ -39,6 +39,11 @@ namespace ChatDBNet.Udp
             await SendingUdpClient.SendAsync(data, data.Length, receiver);
         }
 
+        public async Task StartReceivingAsync()
+        {
+            await StartReceivingAsync((x, y) => { });
+        }
+
         public async Task StartReceivingAsync(Action<NetMessage, IPEndPoint> preliminaryHandling)
         {
             var stop = _stopReceivingTokenSource.Token;

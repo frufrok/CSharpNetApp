@@ -8,14 +8,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Services\Server.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="Services\Server.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\ChatDBNet\ChatDBNet.csproj" />
     <ProjectReference Include="..\ChatDB\ChatDB.csproj" />
   </ItemGroup>

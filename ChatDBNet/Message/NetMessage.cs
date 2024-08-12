@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.Json;
 
 namespace ChatDBNet.Message
@@ -84,6 +85,25 @@ namespace ChatDBNet.Message
                 return JsonSerializer.Deserialize<List<NetMessage>>(listMessage.Text);
             }
             else throw new Exception("Message is not list message.");
+        }
+
+        public static NetMessage CreateConfirmation(NetMessage message)
+        {
+            return new NetMessage()
+            {
+                MessageType = MessageType.CONFIRMATION,
+                Text = message.GetHashCode().ToString()
+            };
+        }
+
+        public static NetMessage CreateRegistration(string user, IPEndPoint ip)
+        {
+            return new NetMessage()
+            {
+                MessageType = MessageType.REGISTRATION,
+                Text = $"{ip.Address}:{ip.Port}",
+                UserFrom = user,
+            };
         }
 
         public object Clone()
